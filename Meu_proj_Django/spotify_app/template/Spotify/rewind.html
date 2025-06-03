@@ -1,0 +1,12 @@
+<!DOCTYPE html>
+<html>
+<head><title>Spotify Rewind</title></head>
+<body>
+  <h1>Top Músicas Recentes</h1>
+  <ul>
+    {% for track in tracks %}
+      <li>{{ track.name }} - {{ track.artists.0.name }}</li>
+    {% endfor %}
+  </ul>
+</body>
+</html>

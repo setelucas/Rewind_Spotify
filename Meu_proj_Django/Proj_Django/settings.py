@@ -9,36 +9,28 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
-import django_environ
+# import django_environ
 from pathlib import Path
-
-# Initialize django-environ
-env = django_environ.Env(
-    # set casting, default value
-    DEBUG=(bool, False)
-)
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-
-# Take environment variables from .env file
-django_environ.Env.read_env(BASE_DIR.parent / 'Rewind.env') # Adjusted path to Rewind.env
-
+ 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/5.2/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = env('SECRET_KEY', default='django-insecure-bnv%!p$6fdn!i-0$ig43e^qwpp#s$867ydi929p%kb%oi8u6f!') # Use env for SECRET_KEY
+SECRET_KEY = 'django-insecure-bnv%!p$6fdn!i-0$ig43e^qwpp#s$867ydi929p%kb%oi8u6f!'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = env('DEBUG') # Use env for DEBUG
+DEBUG = True
 
 ALLOWED_HOSTS = []
 
 # Spotify API Credentials
-SPOTIPY_CLIENT_ID = env('SPOTIPY_CLIENT_ID')
-SPOTIPY_CLIENT_SECRET = env('SPOTIPY_CLIENT_SECRET')
-SPOTIPY_REDIRECT_URI = env('SPOTIPY_REDIRECT_URI')
+SPOTIPY_CLIENT_ID = '8e2f0baec65244b796352bcc723f461c'
+SPOTIPY_CLIENT_SECRET = '2b54b29a682e40bca08a9c5677a2dd21'
+SPOTIPY_REDIRECT_URI = 'https://localhost:8000/spotify/callback'
 
 # Application definition
 
@@ -49,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'spotify_app',
 ]
 
 MIDDLEWARE = [
@@ -61,12 +54,12 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-ROOT_URLCONF = 'Meu_proj_Django.urls'
+ROOT_URLCONF = 'Proj_Django.urls'
 
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [BASE_DIR / 'spotify_app' / 'template' / 'Spotify'],  # Caminho correto para seus HTMLs
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -78,7 +71,7 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'Meu_proj_Django.wsgi.application'
+WSGI_APPLICATION = 'Proj_Django.wsgi.application'
 
 
 # Database
@@ -131,4 +124,4 @@ STATIC_URL = 'static/'
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
 
-DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField' 

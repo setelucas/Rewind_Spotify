@@ -15,36 +15,13 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
-from django.urls import path
-from django.https import HttpResponse
-
-    def cadastro(request):
-        if request.method == 'POST':
-            nome = request.POST['nome']
-            email = request.POST['email']
-            senha = request.POST['senha']
-            # Aqui você pode salvar os dados no banco de dados ou fazer qualquer outra ação necessária
-            return HttpResponse('Cadastro realizado com sucesso!')
-        else:
-            return render(request, 'cadastro.html')
-
-    def login(request):
-        if request.method == 'POST':
-            email = request.POST['email']
-            senha = request.POST['senha']
-            # Aqui você pode verificar as credenciais do usuário no banco de dados
-            # Exemplo de verificação simples (você deve implementar sua própria lógica)
-            if email == 'usuario@exemplo.com' and senha == 'senha123':
-                return HttpResponse('Login realizado com sucesso!')
-            else:
-                return HttpResponse('Credenciais inválidas!')
-        else:
-            return render(request, 'login.html')
+from django.urls import path, include
+from django.http import HttpResponse
+from spotify_app import views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('cadastro/', cadastro, name='cadastro'),
-    path('login/', login, name='login'),
-    path('home/', home, name='home'),
-    path('sair/', sair, name='sair'),
+    path('spotify/login/', views.spotify_login, name='login'),
+    path('spotify/callback/', views.callback, name='callback'),
+    path('spotify/rewind/', views.rewind, name='rewind'),
 ]
