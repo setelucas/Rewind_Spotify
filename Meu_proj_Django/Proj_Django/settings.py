@@ -30,7 +30,7 @@ ALLOWED_HOSTS = []
 # Spotify API Credentials
 SPOTIPY_CLIENT_ID = '8e2f0baec65244b796352bcc723f461c'
 SPOTIPY_CLIENT_SECRET = '2b54b29a682e40bca08a9c5677a2dd21'
-SPOTIPY_REDIRECT_URI = 'https://localhost:8000/spotify/callback'
+SPOTIPY_REDIRECT_URI = 'http://127.0.0.1:8000/spotify/callback/'
 
 # Application definition
 
@@ -59,10 +59,11 @@ ROOT_URLCONF = 'Proj_Django.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [BASE_DIR / 'spotify_app' / 'template' / 'Spotify'],  # Caminho correto para seus HTMLs
+        'DIRS': [BASE_DIR / 'spotify_app' / 'template'],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
+                'django.template.context_processors.debug',
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
