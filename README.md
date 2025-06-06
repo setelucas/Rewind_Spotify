@@ -1,3 +1,5 @@
+⚠️Tradução para o PT-BR depois desse texto⚠️
+
 In-Depth Analysis of a Django Project Structure with Spotify Integration
 
 1. Core Project Files
