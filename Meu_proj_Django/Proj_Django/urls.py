@@ -19,11 +19,12 @@ from django.urls import path, include
 from spotify_app import views
 
 urlpatterns = [
-    path('', views.spotify_login, name='home'),  # Adicione esta linha para a página inicial
+    path('', views.spotify_login, name='home'),
     path('admin/', admin.site.urls),
     path('spotify/login/', views.spotify_login, name='login'),
     path('spotify/callback/', views.callback, name='callback'),
     path('spotify/rewind/', views.rewind, name='rewind'),
     path('profile/', views.profile, name='profile'),
-    path('spotify/search/', views.search_track, name='search_track'),  # Nova URL para busca de músicas
+    path('spotify/search/', views.search_track, name='search_track'),
+    path('spotify/clear-cache/', views.clear_user_cache, name='clear_cache'),
 ]
