@@ -27,4 +27,5 @@ urlpatterns = [
     path('profile/', views.profile, name='profile'),
     path('spotify/search/', views.search_track, name='search_track'),
     path('spotify/clear-cache/', views.clear_user_cache, name='clear_cache'),
+    path('spotify/logout/', views.logout, name='logout'),
 ]
