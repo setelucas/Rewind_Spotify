@@ -1,0 +1,37 @@
+{% extends "Spotify/base.html" %}
+
+{% block title %}Erro - Spotify Rewind{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-danger text-white">
+                    <h4><i class="fas fa-exclamation-triangle"></i> Erro de Autenticação</h4>
+                </div>
+                <div class="card-body">
+                    <p>Ocorreu um erro ao tentar autenticar com o Spotify:</p>
+                    <div class="alert alert-danger">
+                        {{ error }}
+                    </div>
+                    <p>Possíveis soluções:</p>
+                    <ul>
+                        <li>Limpar os cookies do navegador</li>
+                        <li>Tentar com outra conta do Spotify</li>
+                        <li>Verificar se a conta do Spotify está ativa</li>
+                    </ul>
+                    <div class="mt-4">
+                        <a href="{% url 'login' %}" class="btn btn-primary me-2">
+                            <i class="fas fa-redo"></i> Tentar Novamente
+                        </a>
+                        <a href="{% url 'login_new_account' %}" class="btn btn-success">
+                            <i class="fas fa-user-plus"></i> Usar Outra Conta
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

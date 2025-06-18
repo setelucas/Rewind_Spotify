@@ -357,6 +357,19 @@
             <a href="{% url 'rewind' %}" class="spotify-btn">
                 <i class="fas fa-home me-1"></i> Voltar
             </a>
+            <div class="dropdown ms-2">
+                <button class="spotify-btn-outline dropdown-toggle" type="button" id="accountDropdown" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="fas fa-user-cog"></i>
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountDropdown">
+                    <li><a class="dropdown-item" href="{% url 'login_new_account' %}">
+                        <i class="fas fa-exchange-alt me-2"></i> Trocar de Conta
+                    </a></li>
+                    <li><a class="dropdown-item" href="{% url 'logout' %}">
+                        <i class="fas fa-sign-out-alt me-2"></i> Sair
+                    </a></li>
+                </ul>
+            </div>
         </div>
     </div>
 
@@ -975,6 +988,7 @@
     </script>
 </body>
 </html>
+
 
 
 
