@@ -1,372 +1,334 @@
-import time
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse
 from django.shortcuts import redirect, render
-from django.conf import settings
-from django.utils import timezone
+from django.contrib import messages
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
-from django.core.cache import cache
+from django.conf import settings
+import urllib.parse
 from .models import SpotifyUser
-from django.contrib import messages
+from django.utils import timezone
+import datetime
+from django.contrib.auth.models import User
+from django.contrib.auth import authenticate, login
 
-def get_spotify_client(request):
-    """
-    Função auxiliar para obter um cliente Spotify com token válido.
-    Verifica se o token está expirado e o renova automaticamente se necessário.
-    """
-    # Obter o ID do usuário Spotify da sessão
-    spotify_user_id = request.session.get('spotify_user_id')
-    
-    # Se não há ID do usuário na sessão, retornar None
-    if not spotify_user_id:
-        return None
-    
-    try:
-        # Obter o usuário do banco de dados
-        spotify_user = SpotifyUser.objects.get(spotify_id=spotify_user_id)
-        
-        # Verificar se o token está expirado
-        if spotify_user.is_token_expired():
-            # Tentar renovar o token
-            sp_oauth = SpotifyOAuth(
-                client_id=settings.SPOTIPY_CLIENT_ID,
-                client_secret=settings.SPOTIPY_CLIENT_SECRET,
-                redirect_uri=settings.SPOTIPY_REDIRECT_URI,
-                scope="user-top-read user-read-email user-read-private"
-            )
-            
-            if spotify_user.refresh_token:
-                try:
-                    # Renovar o token usando o refresh_token
-                    new_token = sp_oauth.refresh_access_token(spotify_user.refresh_token)
-                    
-                    # Atualizar o token no banco de dados
-                    spotify_user.access_token = new_token['access_token']
-                    if 'refresh_token' in new_token:
-                        spotify_user.refresh_token = new_token['refresh_token']
-                    
-                    # Calcular nova data de expiração
-                    spotify_user.token_expires_at = timezone.now() + timezone.timedelta(seconds=new_token['expires_in'])
-                    spotify_user.save()
-                except Exception as e:
-                    print(f"Erro ao renovar token: {e}")
-                    return None
-            else:
-                # Se não há refresh_token, retornar None para forçar novo login
-                return None
-        
-        # Criar e retornar o cliente Spotify
-        return spotipy.Spotify(auth=spotify_user.access_token)
-        
-    except SpotifyUser.DoesNotExist:
-        # Se o usuário não existe no banco de dados, retornar None
-        return None
-    except Exception as e:
-        # Se ocorrer erro na renovação, retornar None
-        print(f"Erro ao obter cliente Spotify: {e}")
-        return None
+def test_view(request):
+    """View de teste para verificar se as URLs estão funcionando"""
+    return HttpResponse("URLs funcionando! Teste OK.")
+
+def home(request):
+    """Página inicial - redireciona para login"""
+    return redirect('login')
 
 def spotify_login(request):
-    # Limpar qualquer sessão existente para evitar conflitos
-    if 'spotify_user_id' in request.session:
-        del request.session['spotify_user_id']
-    
+    """Página de login - gera URL de autorização do Spotify"""
+    # Configurar OAuth do Spotify
     sp_oauth = SpotifyOAuth(
         client_id=settings.SPOTIPY_CLIENT_ID,
         client_secret=settings.SPOTIPY_CLIENT_SECRET,
         redirect_uri=settings.SPOTIPY_REDIRECT_URI,
-        scope="user-top-read user-read-email user-read-private"
+        scope="user-top-read user-read-private user-read-email"
     )
+    
+    # Gerar URL de autorização
     auth_url = sp_oauth.get_authorize_url()
-    return redirect(auth_url)
+    
+    # Passar a URL para o template
+    return render(request, 'Spotify/login.html', {'auth_url': auth_url})
 
 def callback(request):
+    """Callback do Spotify - processa o código de autorização"""
+    code = request.GET.get('code')
+    error = request.GET.get('error')
+    
+    if error:
+        messages.error(request, f"Erro na autenticação: {error}")
+        return redirect('login')
+    
+    if not code:
+        messages.error(request, "Código de autorização não encontrado")
+        return redirect('login')
+    
     try:
-        # Verificar se há um erro no callback do Spotify
-        error = request.GET.get('error')
-        if error:
-            print(f"Erro retornado pelo Spotify: {error}")
-            messages.error(request, f"Erro de autenticação: {error}")
-            return render(request, 'Spotify/login.html', {'error': error})
-        
+        # Configurar OAuth
         sp_oauth = SpotifyOAuth(
             client_id=settings.SPOTIPY_CLIENT_ID,
             client_secret=settings.SPOTIPY_CLIENT_SECRET,
             redirect_uri=settings.SPOTIPY_REDIRECT_URI,
-            scope="user-top-read user-read-email user-read-private"
+            scope="user-top-read user-read-private user-read-email"
         )
         
-        code = request.GET.get('code')
-        if not code:
-            messages.error(request, "Código de autorização não fornecido")
-            return render(request, 'Spotify/login.html')
-            
+        # Trocar código por token
         token_info = sp_oauth.get_access_token(code)
         
-        # Criar cliente Spotify com o token
-        sp = spotipy.Spotify(auth=token_info['access_token'])
-        
-        # Obter informações do usuário
-        user_info = sp.current_user()
-        
-        # Calcular quando o token expira
-        expires_at = timezone.now() + timezone.timedelta(seconds=token_info['expires_in'])
-        
-        # Verificar se já existe um usuário com este ID na sessão
-        old_user_id = request.session.get('spotify_user_id')
-        if old_user_id and old_user_id != user_info['id']:
-            # Se estamos trocando de usuário, limpar o cache do usuário anterior
-            cache.delete(f'top_tracks_short_{old_user_id}')
-            cache.delete(f'user_info_{old_user_id}')
-        
-        # Salvar ou atualizar o usuário no banco de dados
-        spotify_user, created = SpotifyUser.objects.update_or_create(
-            spotify_id=user_info['id'],
-            defaults={
-                'display_name': user_info.get('display_name'),
-                'email': user_info.get('email'),
-                'profile_image': user_info.get('images')[0]['url'] if user_info.get('images') else None,
-                'access_token': token_info['access_token'],
-                'refresh_token': token_info.get('refresh_token', ''),
-                'token_expires_at': expires_at,
-            }
-        )
-        
-        # Salvar o ID do usuário Spotify na sessão
-        request.session['spotify_user_id'] = spotify_user.spotify_id
-        
-        # Redirecionar para a página de rewind
-        return redirect('rewind')
-        
+        if token_info:
+            # Buscar informações do usuário
+            sp = spotipy.Spotify(auth=token_info['access_token'])
+            user_info = sp.current_user()
+            
+            # Salvar ou atualizar usuário no banco
+            spotify_user, created = SpotifyUser.objects.update_or_create(
+                spotify_id=user_info['id'],
+                defaults={
+                    'display_name': user_info.get('display_name', ''),
+                    'email': user_info.get('email', ''),
+                    'profile_image': user_info['images'][0]['url'] if user_info.get('images') else None,
+                    'access_token': token_info['access_token'],
+                    'refresh_token': token_info.get('refresh_token'),
+                    'token_expires_at': timezone.now() + datetime.timedelta(seconds=token_info['expires_in'])
+                }
+            )
+            
+            # Salvar ID do usuário na sessão
+            request.session['spotify_user_id'] = spotify_user.spotify_id
+            
+            if created:
+                messages.success(request, f"Bem-vindo, {spotify_user.display_name}! Conta criada com sucesso!")
+            else:
+                messages.success(request, f"Bem-vindo de volta, {spotify_user.display_name}!")
+                
+            return redirect('profile')
+        else:
+            messages.error(request, "Erro ao obter token de acesso")
+            return redirect('login')
+            
     except Exception as e:
-        import traceback
-        print(f"Erro no callback do Spotify: {e}")
-        print(traceback.format_exc())
-        # Em vez de redirecionar, renderizar uma página de erro
-        messages.error(request, f"Erro ao processar autenticação: {str(e)}")
-        return render(request, 'Spotify/error.html', {'error': str(e)})
+        messages.error(request, f"Erro na autenticação: {str(e)}")
+        return redirect('login')
 
 def rewind(request):
-    # Obter cliente Spotify com token válido
-    sp = get_spotify_client(request)
-    if not sp:
-        messages.warning(request, "Sessão expirada. Por favor, faça login novamente.")
+    """Página de rewind - busca top tracks dos últimos 3 meses"""
+    spotify_user_id = request.session.get('spotify_user_id')
+    
+    if not spotify_user_id:
+        messages.error(request, "Você precisa fazer login primeiro")
         return redirect('login')
     
     try:
-        # Obter o ID do usuário Spotify da sessão
-        spotify_user_id = request.session.get('spotify_user_id')
+        # Buscar usuário no banco
+        spotify_user = SpotifyUser.objects.get(spotify_id=spotify_user_id)
         
-        # Tentar obter dados do cache
-        cache_key_tracks = f'top_tracks_short_{spotify_user_id}'
-        cache_key_user = f'user_info_{spotify_user_id}'
-        
-        top_tracks_short = cache.get(cache_key_tracks)
-        user_info = cache.get(cache_key_user)
-        
-        # Se não estiver no cache, buscar da API
-        if not top_tracks_short:
-            top_tracks_short = sp.current_user_top_tracks(limit=10, time_range='short_term')
-            # Armazenar no cache por 5 minutos
-            cache.set(cache_key_tracks, top_tracks_short, 300)
-        
-        if not user_info:
-            user_info = sp.current_user()
-            # Armazenar no cache por 30 minutos
-            cache.set(cache_key_user, user_info, 1800)
-        
-        # Verificar se a resposta está vazia
-        if not top_tracks_short['items']:
-            # Limpar cache e redirecionar para login
-            cache.delete(cache_key_tracks)
-            messages.info(request, "Não encontramos dados recentes. Tente novamente.")
+        # Verificar se token expirou
+        if spotify_user.is_token_expired():
+            messages.error(request, "Sua sessão expirou. Faça login novamente.")
             return redirect('login')
-            
+        
+        # Criar cliente Spotify
+        sp = spotipy.Spotify(auth=spotify_user.access_token)
+        
+        # Buscar top tracks dos últimos 3 meses (medium_term)
+        top_tracks = sp.current_user_top_tracks(
+            limit=50,  # Buscar mais músicas
+            time_range='medium_term'  # últimos ~6 meses (mais próximo de 3 meses disponível)
+        )
+        
+        # Buscar dados adicionais para cada track
+        tracks_data = []
+        for track in top_tracks['items']:
+            # Buscar informações de áudio da música
+            try:
+                audio_features = sp.audio_features([track['id']])[0]
+                track_info = {
+                    'id': track['id'],
+                    'name': track['name'],
+                    'artists': [artist['name'] for artist in track['artists']],
+                    'artist_names': ', '.join([artist['name'] for artist in track['artists']]),
+                    'album': track['album']['name'],
+                    'image': track['album']['images'][0]['url'] if track['album']['images'] else None,
+                    'preview_url': track.get('preview_url'),
+                    'external_url': track['external_urls']['spotify'],
+                    'duration_ms': track['duration_ms'],
+                    'popularity': track['popularity'],
+                    # Dados de áudio
+                    'danceability': audio_features['danceability'] if audio_features else 0,
+                    'energy': audio_features['energy'] if audio_features else 0,
+                    'valence': audio_features['valence'] if audio_features else 0,
+                    'tempo': audio_features['tempo'] if audio_features else 0,
+                }
+                tracks_data.append(track_info)
+            except Exception as e:
+                # Se falhar ao buscar audio features, adicionar sem eles
+                track_info = {
+                    'id': track['id'],
+                    'name': track['name'],
+                    'artists': [artist['name'] for artist in track['artists']],
+                    'artist_names': ', '.join([artist['name'] for artist in track['artists']]),
+                    'album': track['album']['name'],
+                    'image': track['album']['images'][0]['url'] if track['album']['images'] else None,
+                    'preview_url': track.get('preview_url'),
+                    'external_url': track['external_urls']['spotify'],
+                    'duration_ms': track['duration_ms'],
+                    'popularity': track['popularity'],
+                    'danceability': 0,
+                    'energy': 0,
+                    'valence': 0,
+                    'tempo': 0,
+                }
+                tracks_data.append(track_info)
+        
         context = {
-            'tracks': top_tracks_short['items'],
-            'time_range': 'últimas 4 semanas',
-            'user': user_info
+            'top_tracks': tracks_data,
+            'total_tracks': len(tracks_data),
+            'spotify_user': spotify_user,
+            'time_period': 'últimos 6 meses'  # Spotify não tem exatamente 3 meses
         }
         
         return render(request, 'Spotify/rewind.html', context)
         
+    except SpotifyUser.DoesNotExist:
+        messages.error(request, "Usuário não encontrado. Faça login novamente.")
+        return redirect('login')
     except Exception as e:
-        # Se ocorrer algum erro, redirecionar para login
-        import traceback
-        print(f"Erro ao acessar Spotify API: {e}")
-        print(traceback.format_exc())
-        messages.error(request, "Ocorreu um erro ao acessar seus dados do Spotify.")
-        return render(request, 'Spotify/error.html', {'error': str(e)})
+        messages.error(request, f"Erro ao buscar dados do Spotify: {str(e)}")
+        return redirect('login')
 
 def profile(request):
-    """
-    View para a página de perfil do usuário.
-    """
-    # Obter cliente Spotify com token válido
-    sp = get_spotify_client(request)
-    if not sp:
+    """Página de perfil - busca dados do usuário logado"""
+    spotify_user_id = request.session.get('spotify_user_id')
+    
+    if not spotify_user_id:
+        messages.error(request, "Você precisa fazer login primeiro")
         return redirect('login')
     
     try:
-        # Obter o ID do usuário Spotify da sessão
-        spotify_user_id = request.session.get('spotify_user_id')
+        # Buscar usuário no banco
+        spotify_user = SpotifyUser.objects.get(spotify_id=spotify_user_id)
         
-        # Tentar obter dados do cache
-        cache_key_tracks = f'top_tracks_short_{spotify_user_id}'
-        cache_key_user = f'user_info_{spotify_user_id}'
-        
-        top_tracks_short = cache.get(cache_key_tracks)
-        user_info = cache.get(cache_key_user)
-        
-        # Se não estiver no cache, buscar da API
-        if not top_tracks_short:
-            top_tracks_short = sp.current_user_top_tracks(limit=10, time_range='short_term')
-            # Armazenar no cache por 5 minutos
-            cache.set(cache_key_tracks, top_tracks_short, 300)
-        
-        if not user_info:
-            user_info = sp.current_user()
-            # Armazenar no cache por 30 minutos
-            cache.set(cache_key_user, user_info, 1800)
-        
-        # Verificar se a resposta está vazia
-        if not top_tracks_short['items']:
-            # Limpar cache e redirecionar para login
-            cache.delete(cache_key_tracks)
+        # Verificar se token expirou
+        if spotify_user.is_token_expired():
+            messages.error(request, "Sua sessão expirou. Faça login novamente.")
             return redirect('login')
-            
+        
+        # Criar cliente Spotify
+        sp = spotipy.Spotify(auth=spotify_user.access_token)
+        
+        # Buscar informações atualizadas
+        user_info = sp.current_user()
+        top_tracks = sp.current_user_top_tracks(limit=5, time_range='medium_term')
+        
         context = {
-            'tracks': top_tracks_short['items'],
-            'user': user_info
+            'user_info': user_info,
+            'top_tracks': top_tracks['items'],
+            'spotify_user': spotify_user,
+            'message': f'Bem-vindo, {user_info.get("display_name", "Usuário")}!'
         }
         
         return render(request, 'Spotify/profile.html', context)
         
-    except Exception as e:
-        import traceback
-        print(f"Erro ao acessar Spotify API: {e}")
-        print(traceback.format_exc())
+    except SpotifyUser.DoesNotExist:
+        messages.error(request, "Usuário não encontrado. Faça login novamente.")
         return redirect('login')
-
-def search_track(request):
-    """
-    View para buscar músicas no Spotify.
-    """
-    # Obter cliente Spotify com token válido
-    sp = get_spotify_client(request)
-    if not sp:
-        return JsonResponse({'error': 'Não autenticado'}, status=401)
-    
-    # Obter o termo de busca
-    query = request.GET.get('q', '')
-    if not query:
-        return JsonResponse({'error': 'Termo de busca não fornecido'}, status=400)
-    
-    try:
-        # Tentar obter resultados do cache
-        cache_key = f'search_results_{query}'
-        cached_results = cache.get(cache_key)
-        
-        if cached_results:
-            return JsonResponse({'tracks': cached_results})
-        
-        # Se não estiver no cache, buscar da API
-        results = sp.search(q=query, type='track', limit=8)
-        
-        # Formatar resultados
-        tracks = []
-        for item in results['tracks']['items']:
-            track = {
-                'id': item['id'],
-                'name': item['name'],
-                'artist': item['artists'][0]['name'],
-                'image': item['album']['images'][0]['url'] if item['album']['images'] else '',
-                'preview_url': item['preview_url']
-            }
-            tracks.append(track)
-        
-        # Armazenar no cache por 1 hora (resultados de busca mudam menos)
-        cache.set(cache_key, tracks, 3600)
-        
-        return JsonResponse({'tracks': tracks})
-        
     except Exception as e:
-        import traceback
-        print(f"Erro ao buscar músicas: {e}")
-        print(traceback.format_exc())
-        return JsonResponse({'error': str(e)}, status=500)
-
-def clear_user_cache(request):
-    """
-    View para limpar o cache do usuário.
-    Útil quando o usuário quer forçar uma atualização dos dados.
-    """
-    # Obter o ID do usuário Spotify da sessão
-    spotify_user_id = request.session.get('spotify_user_id')
-    
-    if not spotify_user_id:
-        return redirect('login')
-    
-    try:
-        # Limpar cache do usuário
-        cache.delete(f'top_tracks_short_{spotify_user_id}')
-        cache.delete(f'user_info_{spotify_user_id}')
-        
-        # Redirecionar para a página anterior ou para rewind
-        referer = request.META.get('HTTP_REFERER')
-        if referer:
-            return redirect(referer)
-        return redirect('rewind')
-    except Exception as e:
-        print(f"Erro ao limpar cache: {e}")
+        messages.error(request, f"Erro ao buscar dados do Spotify: {str(e)}")
         return redirect('login')
 
 def logout(request):
-    """
-    View para fazer logout do usuário e permitir login com outra conta.
-    Limpa a sessão, cache e redireciona para a página de login.
-    """
-    # Obter o ID do usuário Spotify da sessão
+    """Logout - limpa sessão"""
+    if 'spotify_user_id' in request.session:
+        del request.session['spotify_user_id']
+    messages.success(request, "Logout realizado com sucesso!")
+    return redirect('login')
+
+def login_alt(request):
+    """Página de login alternativa"""
+    return render(request, 'Spotify/auth/login_alt.html')
+
+def register_user(request):
+    """Página de registro de usuário"""
+    if request.method == 'POST':
+        # Pegar dados do formulário
+        first_name = request.POST.get('first_name')
+        last_name = request.POST.get('last_name')
+        username = request.POST.get('username')
+        email = request.POST.get('email')
+        password1 = request.POST.get('password1')
+        password2 = request.POST.get('password2')
+        terms = request.POST.get('terms')
+        newsletter = request.POST.get('newsletter')
+        
+        # Validações
+        if not all([first_name, last_name, username, email, password1, password2]):
+            messages.error(request, "Todos os campos obrigatórios devem ser preenchidos")
+            return render(request, 'Spotify/auth/register.html')
+        
+        if password1 != password2:
+            messages.error(request, "As senhas não coincidem")
+            return render(request, 'Spotify/auth/register.html')
+        
+        if len(password1) < 6:
+            messages.error(request, "A senha deve ter pelo menos 6 caracteres")
+            return render(request, 'Spotify/auth/register.html')
+        
+        if not terms:
+            messages.error(request, "Você deve aceitar os termos de uso")
+            return render(request, 'Spotify/auth/register.html')
+        
+        # Verificar se usuário já existe
+        if User.objects.filter(username=username).exists():
+            messages.error(request, "Nome de usuário já existe")
+            return render(request, 'Spotify/auth/register.html')
+        
+        if User.objects.filter(email=email).exists():
+            messages.error(request, "Email já cadastrado")
+            return render(request, 'Spotify/auth/register.html')
+        
+        try:
+            # Criar usuário
+            user = User.objects.create_user(
+                username=username,
+                email=email,
+                password=password1,
+                first_name=first_name,
+                last_name=last_name
+            )
+            
+            # Fazer login automático
+            user = authenticate(username=username, password=password1)
+            if user:
+                login(request, user)
+                messages.success(request, f"Conta criada com sucesso! Bem-vindo, {first_name}!")
+                return redirect('dashboard')
+            else:
+                messages.success(request, "Conta criada com sucesso! Faça login para continuar.")
+                return redirect('login_alt')
+                
+        except Exception as e:
+            messages.error(request, f"Erro ao criar conta: {str(e)}")
+            return render(request, 'Spotify/auth/register.html')
+    
+    return render(request, 'Spotify/auth/register.html')
+
+def dashboard(request):
+    """Dashboard do usuário"""
     spotify_user_id = request.session.get('spotify_user_id')
     
-    # Limpar cache específico do usuário
-    if spotify_user_id:
-        cache.delete(f'top_tracks_short_{spotify_user_id}')
-        cache.delete(f'user_info_{spotify_user_id}')
+    if not spotify_user_id:
+        messages.error(request, "Você precisa fazer login primeiro")
+        return redirect('login')
     
-    # Limpar a sessão
-    request.session.flush()
-    
-    # Limpar o cache do spotipy (.cache)
-    import os
-    cache_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.cache')
-    if os.path.exists(cache_path):
-        try:
-            os.remove(cache_path)
-        except Exception as e:
-            print(f"Erro ao remover arquivo de cache: {e}")
-    
-    # Redirecionar para a página de login com parâmetro para forçar nova autenticação
-    return redirect('login_new_account')
+    try:
+        spotify_user = SpotifyUser.objects.get(spotify_id=spotify_user_id)
+        context = {
+            'spotify_user': spotify_user,
+        }
+        return render(request, 'Spotify/user/dashboard.html', context)
+    except SpotifyUser.DoesNotExist:
+        messages.error(request, "Usuário não encontrado")
+        return redirect('login')
 
-def login_new_account(request):
-    """
-    View para forçar login com uma nova conta Spotify.
-    Adiciona parâmetros para evitar o uso de tokens em cache.
-    """
-    # Limpar a sessão atual
-    request.session.flush()
+def user_settings(request):
+    """Configurações do usuário"""
+    spotify_user_id = request.session.get('spotify_user_id')
     
-    # Adicionar mensagem
-    messages.info(request, "Por favor, faça login com sua conta Spotify. Se já estiver logado no Spotify, você pode clicar em 'Usar outra conta'.")
+    if not spotify_user_id:
+        messages.error(request, "Você precisa fazer login primeiro")
+        return redirect('login')
     
-    sp_oauth = SpotifyOAuth(
-        client_id=settings.SPOTIPY_CLIENT_ID,
-        client_secret=settings.SPOTIPY_CLIENT_SECRET,
-        redirect_uri=settings.SPOTIPY_REDIRECT_URI,
-        scope="user-top-read user-read-email user-read-private"
-    )
-    
-    # Adicionar parâmetro show_dialog=true para forçar a tela de login do Spotify
-    auth_url = sp_oauth.get_authorize_url(show_dialog=True)
-    return redirect(auth_url)
+    try:
+        spotify_user = SpotifyUser.objects.get(spotify_id=spotify_user_id)
+        context = {
+            'spotify_user': spotify_user,
+        }
+        return render(request, 'Spotify/user/settings.html', context)
+    except SpotifyUser.DoesNotExist:
+        messages.error(request, "Usuário não encontrado")
+        return redirect('login')

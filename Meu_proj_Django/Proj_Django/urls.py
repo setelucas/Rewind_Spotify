@@ -16,24 +16,16 @@ Including another URLconf
 """
 from django.contrib import admin
 from django.urls import path, include
-from django.core.cache import cache
 from django.http import HttpResponse
-from spotify_app import views
+from django.core.cache import cache
 
 def clear_all_cache(request):
     cache.clear()
     return HttpResponse("Cache limpo com sucesso!")
 
 urlpatterns = [
-    path('', views.spotify_login, name='home'),
     path('admin/', admin.site.urls),
-    path('spotify/login/', views.spotify_login, name='login'),
-    path('spotify/login-new/', views.login_new_account, name='login_new_account'),
-    path('spotify/callback/', views.callback, name='callback'),
-    path('spotify/rewind/', views.rewind, name='rewind'),
-    path('profile/', views.profile, name='profile'),
-    path('spotify/search/', views.search_track, name='search_track'),
-    path('spotify/clear-cache/', views.clear_user_cache, name='clear_cache'),
-    path('spotify/logout/', views.logout, name='logout'),
+    path('spotify/', include('spotify_app.urls')),
+    path('', include('spotify_app.urls')),
     path('clear-all-cache/', clear_all_cache, name='clear_all_cache'),
 ]

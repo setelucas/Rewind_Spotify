@@ -19,9 +19,8 @@ class SpotifyUser(models.Model):
         return self.display_name or self.spotify_id
     
     def is_token_expired(self):
-        """
-        Verifica se o token está expirado.
-        Retorna True se o token expira em menos de 60 segundos.
-        """
+        """Verifica se o token está expirado"""
+        if not self.token_expires_at:
+            return True
         # Adicionar um buffer de 60 segundos para evitar problemas de timing
         return self.token_expires_at <= timezone.now() + timezone.timedelta(seconds=60)

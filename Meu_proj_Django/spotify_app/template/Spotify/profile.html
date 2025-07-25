@@ -1,999 +1,121 @@
-<!DOCTYPE html>
-<html lang="pt-br">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Perfil - Spotify Rewind</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <!-- Font Awesome -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <style>
-        :root {
-            --background-color: #121212;
-            --text-color: white;
-            --header-gradient-start: #1DB954;
-            --header-gradient-end: #191414;
-            --card-background: #282828;
-            --card-hover-background: #3E3E3E;
-            --accent-color: #1DB954;
-            --accent-hover-color: #1ed760;
-            --secondary-text-color: #b3b3b3;
-        }
-        
-        body.light-mode {
-            --background-color: #f5f5f5;
-            --text-color: #121212;
-            --header-gradient-start: #1DB954;
-            --header-gradient-end: #e0e0e0;
-            --card-background: #ffffff;
-            --card-hover-background: #e8e8e8;
-            --accent-color: #1DB954;
-            --accent-hover-color: #1ed760;
-            --secondary-text-color: #555555;
-        }
-        
-        body {
-            background-color: var(--background-color);
-            color: var(--text-color);
-            font-family: 'Gotham', 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            transition: all 0.3s ease;
-        }
-        
-        .profile-header {
-            position: relative;
-            height: 300px;
-            overflow: hidden;
-            margin-bottom: 80px;
-        }
-        
-        .profile-cover {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            filter: brightness(0.7);
-        }
-        
-        .profile-cover-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background: linear-gradient(to bottom, rgba(0,0,0,0.1), rgba(0,0,0,0.8));
-        }
-        
-        .profile-info {
-            position: absolute;
-            bottom: -60px;
-            left: 50px;
-            display: flex;
-            align-items: flex-end;
-        }
-        
-        .profile-avatar {
-            width: 150px;
-            height: 150px;
-            border-radius: 50%;
-            border: 4px solid var(--background-color);
-            object-fit: cover;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-        }
-        
-        .profile-name {
-            margin-left: 20px;
-            margin-bottom: 10px;
-        }
-        
-        .profile-name h1 {
-            font-size: 2.5rem;
-            font-weight: bold;
-            margin-bottom: 5px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5);
-        }
-        
-        .profile-stats {
-            color: var(--secondary-text-color);
-            font-size: 0.9rem;
-        }
-        
-        .profile-actions {
-            position: absolute;
-            bottom: 20px;
-            right: 50px;
-        }
-        
-        .profile-card {
-            background-color: var(--card-background);
-            border-radius: 8px;
-            padding: 20px;
-            margin-bottom: 20px;
-            transition: all 0.3s ease;
-        }
-        
-        .profile-card:hover {
-            background-color: var(--card-hover-background);
-            transform: translateY(-5px);
-        }
-        
-        .profile-card-title {
-            font-size: 1.2rem;
-            font-weight: bold;
-            margin-bottom: 15px;
-            color: var(--text-color);
-            display: flex;
-            align-items: center;
-        }
-        
-        .profile-card-title i {
-            margin-right: 10px;
-            color: var(--accent-color);
-        }
-        
-        .spotify-btn {
-            background-color: var(--accent-color);
-            color: white;
-            border: none;
-            border-radius: 50px;
-            padding: 0.5rem 1.5rem;
-            font-weight: bold;
-            transition: all 0.3s ease;
-        }
-        
-        .spotify-btn:hover {
-            background-color: var(--accent-hover-color);
-            transform: scale(1.05);
-        }
-        
-        .spotify-btn-outline {
-            background-color: transparent;
-            color: white;
-            border: 1px solid white;
-            border-radius: 50px;
-            padding: 0.5rem 1.5rem;
-            font-weight: bold;
-            transition: all 0.3s ease;
-        }
-        
-        .spotify-btn-outline:hover {
-            background-color: rgba(255,255,255,0.1);
-            transform: scale(1.05);
-        }
-        
-        .review-card {
-            background-color: var(--card-background);
-            border-radius: 8px;
-            padding: 15px;
-            margin-bottom: 15px;
-            transition: all 0.3s ease;
-        }
-        
-        .review-card:hover {
-            background-color: var(--card-hover-background);
-        }
-        
-        .review-track {
-            display: flex;
-            align-items: center;
-            margin-bottom: 10px;
-        }
-        
-        .review-track-image {
-            width: 60px;
-            height: 60px;
-            border-radius: 4px;
-            object-fit: cover;
-        }
-        
-        .review-track-info {
-            margin-left: 15px;
-        }
-        
-        .review-track-name {
-            font-weight: bold;
-            margin-bottom: 2px;
-        }
-        
-        .review-track-artist {
-            color: var(--secondary-text-color);
-            font-size: 0.9rem;
-        }
-        
-        .review-rating {
-            margin: 10px 0;
-            color: #FFD700;
-        }
-        
-        .review-text {
-            color: var(--secondary-text-color);
-            font-style: italic;
-            margin-bottom: 5px;
-        }
-        
-        .review-date {
-            color: var(--secondary-text-color);
-            font-size: 0.8rem;
-            text-align: right;
-        }
-        
-        .review-edited-date {
-            color: var(--secondary-text-color);
-            font-size: 0.8rem;
-            font-style: italic;
-            margin-left: 5px;
-        }
+{% extends "Spotify/base.html" %}
+{% load static %}
 
-        .review-actions {
-            display: flex;
-            justify-content: flex-end;
-        }
-        
-        .star-rating {
-            display: inline-block;
-        }
-        
-        .star-rating input {
-            display: none;
-        }
-        
-        .star-rating label {
-            float: right;
-            cursor: pointer;
-            color: #ccc;
-            transition: color 0.3s;
-            font-size: 1.5rem;
-            margin: 0 2px;
-        }
-        
-        .star-rating label:before {
-            content: '\f005';
-            font-family: 'Font Awesome 5 Free';
-            font-weight: 900;
-        }
-        
-        .star-rating input:checked ~ label,
-        .star-rating input:checked ~ label ~ label {
-            color: #FFD700;
-        }
-        
-        .star-rating label:hover,
-        .star-rating label:hover ~ label {
-            color: #FFD700;
-        }
-        
-        .profile-nav {
-            background-color: var(--card-background);
-            border-radius: 8px;
-            margin-bottom: 20px;
-        }
-        
-        .profile-nav-link {
-            color: var(--text-color);
-            padding: 15px 20px;
-            display: inline-block;
-            text-decoration: none;
-            font-weight: bold;
-            transition: all 0.3s ease;
-        }
-        
-        .profile-nav-link:hover,
-        .profile-nav-link.active {
-            color: var(--accent-color);
-        }
-        
-        .profile-nav-link.active {
-            border-bottom: 2px solid var(--accent-color);
-        }
-        
-        .background-effects {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            pointer-events: none;
-            z-index: -1;
-            opacity: 0.2;
-        }
-        
-        .background-effects.particles {
-            background-image: url('data:image/svg+xml;utf8,<svg width="100" height="100" xmlns="http://www.w3.org/2000/svg"><circle cx="50" cy="50" r="1" fill="white" /></svg>');
-            background-size: 100px 100px;
-        }
-        
-        .background-effects.waves {
-            background: linear-gradient(45deg, var(--accent-color) 0%, transparent 70%);
-            filter: blur(100px);
-        }
-        
-        .background-effects.none {
-            display: none;
-        }
+{% block title %}Perfil - Spotify Rewind{% endblock %}
 
-        /* Estilo para inputs de arquivo */
-        .form-control[type="file"] {
-            background-color: rgba(255, 255, 255, 0.1);
-            color: var(--text-color);
-            border-color: rgba(255, 255, 255, 0.2);
-        }
+{% block content %}
+<link rel="stylesheet" href="{% static 'Spotify_app/css/profile_style.css' %}">
 
-        .form-control[type="file"]::file-selector-button {
-            background-color: var(--accent-color);
-            color: white;
-            border: none;
-            padding: 0.375rem 0.75rem;
-            margin-right: 0.75rem;
-            border-radius: 0.25rem;
-            cursor: pointer;
-            transition: all 0.2s ease;
-        }
+<div id="background-image-container">
+    <img id="background-image" crossorigin="anonymous" alt="">
+</div>
 
-        .form-control[type="file"]::file-selector-button:hover {
-            background-color: var(--accent-hover-color);
-        }
-    </style>
-</head>
-<body>
-    <!-- Efeitos de fundo -->
-    <div class="background-effects" id="backgroundEffects"></div>
+<a href="{% url 'logout' %}" class="back-button">
+    ← Sair
+</a>
 
-    <!-- Cabeçalho do perfil -->
-    <div class="profile-header">
-        <img src="https://source.unsplash.com/random/1200x400/?music" alt="Capa do perfil" class="profile-cover" id="profileCover">
-        <div class="profile-cover-overlay"></div>
-        <div class="profile-info">
-            <img src="{{ user.images.0.url|default:'https://i.scdn.co/image/ab6775700000ee85c2e2db64b4e31be6953dc9bf' }}" alt="{{ user.display_name }}" class="profile-avatar" id="profileAvatar">
-            <div class="profile-name">
-                <h1>{{ user.display_name }}</h1>
-                <div class="profile-stats">
-                    <span><i class="fas fa-music me-1"></i> {{ tracks|length }} músicas favoritas</span>
-                </div>
-            </div>
-        </div>
-        <div class="profile-actions">
-            <button class="spotify-btn-outline me-2" id="editProfileBtn">
-                <i class="fas fa-edit me-1"></i> Editar Perfil
-            </button>
-            <a href="{% url 'rewind' %}" class="spotify-btn">
-                <i class="fas fa-home me-1"></i> Voltar
-            </a>
-            <div class="dropdown ms-2">
-                <button class="spotify-btn-outline dropdown-toggle" type="button" id="accountDropdown" data-bs-toggle="dropdown" aria-expanded="false">
-                    <i class="fas fa-user-cog"></i>
-                </button>
-                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="accountDropdown">
-                    <li><a class="dropdown-item" href="{% url 'login_new_account' %}">
-                        <i class="fas fa-exchange-alt me-2"></i> Trocar de Conta
-                    </a></li>
-                    <li><a class="dropdown-item" href="{% url 'logout' %}">
-                        <i class="fas fa-sign-out-alt me-2"></i> Sair
-                    </a></li>
-                </ul>
-            </div>
-        </div>
+<div class="container">
+    <div class="tracks-container">
+        <!-- As músicas serão renderizadas aqui pelo JavaScript -->
     </div>
+</div>
 
-    <div class="container mb-5">
-        <div class="row">
-            <div class="col-md-12">
-                <div class="profile-nav">
-                    <a href="#reviews" class="profile-nav-link active">Reviews</a>
-                    <a href="#favorites" class="profile-nav-link">Favoritas</a>
-                    <a href="#stats" class="profile-nav-link">Estatísticas</a>
-                </div>
-            </div>
-        </div>
+<script>
+    // Dados das top tracks do usuário vindos do Django
+    const tracks = [
+        {% for track in top_tracks %}
+        {
+            id: {{ forloop.counter }},
+            name: "{{ track.name|escapejs }}",
+            artist: "{% for artist in track.artists %}{{ artist.name }}{% if not forloop.last %}, {% endif %}{% endfor %}",
+            image: "{% if track.album.images %}{{ track.album.images.0.url }}{% else %}https://via.placeholder.com/300x300/1a1917/f8f5f2?text=No+Image{% endif %}"
+        }{% if not forloop.last %},{% endif %}
+        {% empty %}
+        {
+            id: 1,
+            name: "Nenhuma música encontrada",
+            artist: "Faça login novamente",
+            image: "https://via.placeholder.com/300x300/1a1917/f8f5f2?text=No+Music"
+        }
+        {% endfor %}
+    ];
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const tracksContainer = document.querySelector(".tracks-container");
+        const backgroundImage = document.getElementById("background-image");
         
-        <div class="row">
-            <div class="col-md-8">
-                <!-- Seção de Reviews -->
-                <div id="reviews">
-                    <div class="profile-card">
-                        <div class="profile-card-title">
-                            <i class="fas fa-star"></i> Minhas Reviews
-                        </div>
-                        
-                        <div class="review-list" id="reviewList">
-                            <!-- As reviews serão adicionadas aqui dinamicamente -->
-                            <div class="text-center text-muted py-4" id="noReviewsMessage">
-                                <i class="fas fa-music fa-2x mb-3"></i>
-                                <p>Você ainda não tem reviews. Adicione sua primeira review abaixo!</p>
-                            </div>
-                        </div>
-                        
-                        <div class="mt-4">
-                            <button class="spotify-btn" id="addReviewBtn">
-                                <i class="fas fa-plus me-1"></i> Adicionar Review
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="col-md-4">
-                <!-- Seção de Personalização -->
-                <div class="profile-card">
-                    <div class="profile-card-title">
-                        <i class="fas fa-paint-brush"></i> Personalização
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Imagem de Fundo</label>
-                        <div class="input-group mb-2">
-                            <input type="file" class="form-control" id="coverFileInput" accept=".jpg,.jpeg,.png,.gif">
-                            <button class="btn btn-outline-secondary" type="button" id="applyCoverBtn">Aplicar</button>
-                        </div>
-                        <div class="form-text text-muted">Selecione uma imagem ou GIF para personalizar seu fundo</div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Efeitos de Fundo</label>
-                        <div class="d-flex gap-2">
-                            <button class="btn btn-sm btn-outline-light" id="effectNoneBtn">Nenhum</button>
-                            <button class="btn btn-sm btn-outline-light" id="effectParticlesBtn">Partículas</button>
-                            <button class="btn btn-sm btn-outline-light" id="effectWavesBtn">Ondas</button>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Foto de Perfil</label>
-                        <div class="input-group mb-2">
-                            <input type="file" class="form-control" id="avatarFileInput" accept=".jpg,.jpeg,.png,.gif">
-                            <button class="btn btn-outline-secondary" type="button" id="applyAvatarBtn">Aplicar</button>
-                        </div>
-                        <div class="form-text text-muted">Selecione uma imagem para usar como foto de perfil</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
+        renderTracks(tracksContainer);
+        initialAnimation();
+        preloadImages();
+        setupHoverEvents(backgroundImage, tracksContainer);
+    });
 
-    <!-- Modal para adicionar review -->
-    <div class="modal fade" id="reviewModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog">
-            <div class="modal-content bg-dark text-white">
-                <div class="modal-header">
-                    <h5 class="modal-title">Adicionar Review</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <label class="form-label">Buscar Música</label>
-                        <div class="input-group">
-                            <input type="text" class="form-control" id="searchTrackInput" placeholder="Nome da música ou artista">
-                            <button class="btn btn-outline-light" type="button" id="searchTrackBtn">Buscar</button>
-                        </div>
-                    </div>
-                    
-                    <div id="searchResults" class="mb-3" style="max-height: 200px; overflow-y: auto; display: none;">
-                        <!-- Resultados da busca serão adicionados aqui -->
-                    </div>
-                    
-                    <div id="selectedTrack" class="mb-3" style="display: none;">
-                        <div class="review-track">
-                            <img src="" alt="" class="review-track-image" id="selectedTrackImg">
-                            <div class="review-track-info">
-                                <div class="review-track-name" id="selectedTrackName"></div>
-                                <div class="review-track-artist" id="selectedTrackArtist"></div>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Avaliação</label>
-                        <div class="star-rating">
-                            <input type="radio" id="star5" name="rating" value="5">
-                            <label for="star5"></label>
-                            <input type="radio" id="star4" name="rating" value="4">
-                            <label for="star4"></label>
-                            <input type="radio" id="star3" name="rating" value="3">
-                            <label for="star3"></label>
-                            <input type="radio" id="star2" name="rating" value="2">
-                            <label for="star2"></label>
-                            <input type="radio" id="star1" name="rating" value="1">
-                            <label for="star1"></label>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label class="form-label">Sua Review</label>
-                        <textarea class="form-control" id="reviewText" rows="3" placeholder="O que você achou desta música?"></textarea>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-success" id="saveReviewBtn">Salvar Review</button>
-                </div>
-            </div>
-        </div>
-    </div>
+    function renderTracks(container) {
+        tracks.forEach((track, index) => {
+            const trackItem = document.createElement("div");
+            trackItem.classList.add("track-item");
+            trackItem.dataset.id = track.id;
+            trackItem.dataset.image = track.image;
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        document.addEventListener('DOMContentLoaded', function() {
-            // Elementos do perfil
-            const editProfileBtn = document.getElementById('editProfileBtn');
-            const profileCover = document.getElementById('profileCover');
-            const profileAvatar = document.getElementById('profileAvatar');
-            const coverFileInput = document.getElementById('coverFileInput');
-            const applyCoverBtn = document.getElementById('applyCoverBtn');
-            const avatarFileInput = document.getElementById('avatarFileInput');
-            const applyAvatarBtn = document.getElementById('applyAvatarBtn');
-            
-            // Elementos de efeitos de fundo
-            const backgroundEffects = document.getElementById('backgroundEffects');
-            const effectNoneBtn = document.getElementById('effectNoneBtn');
-            const effectParticlesBtn = document.getElementById('effectParticlesBtn');
-            const effectWavesBtn = document.getElementById('effectWavesBtn');
-            
-            // Elementos de review
-            const addReviewBtn = document.getElementById('addReviewBtn');
-            const reviewModal = new bootstrap.Modal(document.getElementById('reviewModal'));
-            const searchTrackInput = document.getElementById('searchTrackInput');
-            const searchTrackBtn = document.getElementById('searchTrackBtn');
-            const searchResults = document.getElementById('searchResults');
-            const selectedTrack = document.getElementById('selectedTrack');
-            const selectedTrackImg = document.getElementById('selectedTrackImg');
-            const selectedTrackName = document.getElementById('selectedTrackName');
-            const selectedTrackArtist = document.getElementById('selectedTrackArtist');
-            const saveReviewBtn = document.getElementById('saveReviewBtn');
-            const reviewList = document.getElementById('reviewList');
-            const noReviewsMessage = document.getElementById('noReviewsMessage');
-            
-            // Função para mostrar feedback de sucesso
-            function showSuccessFeedback(button, message) {
-                const originalText = button.innerHTML;
-                button.innerHTML = `<i class="fas fa-check"></i> ${message}`;
-                button.classList.add('btn-success');
-                button.classList.remove('btn-outline-secondary');
-                
-                setTimeout(() => {
-                    button.innerHTML = originalText;
-                    button.classList.remove('btn-success');
-                    button.classList.add('btn-outline-secondary');
-                }, 2000);
-            }
+            trackItem.innerHTML = `
+                <div class="track-name">${track.name}</div>
+                <div class="track-artist">${track.artist}</div>
+            `;
 
-            // Aplicar imagem de capa do arquivo selecionado
-            applyCoverBtn.addEventListener('click', function() {
-                const file = coverFileInput.files[0];
-                if (file && validateImageFile(coverFileInput, 'capa')) {
-                    const reader = new FileReader();
-                    
-                    reader.onload = function(e) {
-                        const imageDataUrl = e.target.result;
-                        profileCover.src = imageDataUrl;
-                        localStorage.setItem('profileCoverUrl', imageDataUrl);
-                        showSuccessFeedback(applyCoverBtn, 'Aplicado');
-                    };
-                    
-                    reader.readAsDataURL(file);
-                }
-            });
-            
-            // Aplicar imagem de avatar do arquivo selecionado
-            applyAvatarBtn.addEventListener('click', function() {
-                const file = avatarFileInput.files[0];
-                if (file && validateImageFile(avatarFileInput, 'avatar')) {
-                    const reader = new FileReader();
-                    
-                    reader.onload = function(e) {
-                        const imageDataUrl = e.target.result;
-                        profileAvatar.src = imageDataUrl;
-                        localStorage.setItem('profileAvatarUrl', imageDataUrl);
-                        showSuccessFeedback(applyAvatarBtn, 'Aplicado');
-                    };
-                    
-                    reader.readAsDataURL(file);
-                }
-            });
-            
-            // Aplicar efeito de fundo: nenhum
-            effectNoneBtn.addEventListener('click', function() {
-                backgroundEffects.className = 'background-effects none';
-                localStorage.setItem('backgroundEffect', 'none');
-                
-                // Atualizar estilo dos botões
-                updateEffectButtons('none');
-            });
-            
-            // Aplicar efeito de fundo: partículas
-            effectParticlesBtn.addEventListener('click', function() {
-                backgroundEffects.className = 'background-effects particles';
-                localStorage.setItem('backgroundEffect', 'particles');
-                
-                // Atualizar estilo dos botões
-                updateEffectButtons('particles');
-            });
-            
-            // Aplicar efeito de fundo: ondas
-            effectWavesBtn.addEventListener('click', function() {
-                backgroundEffects.className = 'background-effects waves';
-                localStorage.setItem('backgroundEffect', 'waves');
-                
-                // Atualizar estilo dos botões
-                updateEffectButtons('waves');
-            });
-            
-            // Função para atualizar o estilo dos botões de efeito
-            function updateEffectButtons(activeEffect) {
-                effectNoneBtn.classList.remove('btn-primary');
-                effectParticlesBtn.classList.remove('btn-primary');
-                effectWavesBtn.classList.remove('btn-primary');
-                
-                effectNoneBtn.classList.add('btn-outline-light');
-                effectParticlesBtn.classList.add('btn-outline-light');
-                effectWavesBtn.classList.add('btn-outline-light');
-                
-                if (activeEffect === 'none') {
-                    effectNoneBtn.classList.remove('btn-outline-light');
-                    effectNoneBtn.classList.add('btn-primary');
-                } else if (activeEffect === 'particles') {
-                    effectParticlesBtn.classList.remove('btn-outline-light');
-                    effectParticlesBtn.classList.add('btn-primary');
-                } else if (activeEffect === 'waves') {
-                    effectWavesBtn.classList.remove('btn-outline-light');
-                    effectWavesBtn.classList.add('btn-primary');
-                }
-            }
-            
-            // Resetar o modal quando ele for fechado
-            document.getElementById('reviewModal').addEventListener('hidden.bs.modal', function() {
-                // Resetar para o modo de adição
-                this.dataset.editId = '';
-                document.querySelector('.modal-title').textContent = 'Adicionar Review';
-                saveReviewBtn.textContent = 'Salvar Review';
-                document.querySelector('#reviewModal .mb-3:first-child').style.display = 'block';
-            });
-
-            // Abrir modal para adicionar review
-            addReviewBtn.addEventListener('click', function() {
-                // Limpar campos do modal
-                searchTrackInput.value = '';
-                searchResults.style.display = 'none';
-                selectedTrack.style.display = 'none';
-                document.querySelectorAll('input[name="rating"]').forEach(input => input.checked = false);
-                document.getElementById('reviewText').value = '';
-                
-                // Resetar o modal para o modo de adição
-                document.getElementById('reviewModal').dataset.editId = '';
-                document.querySelector('.modal-title').textContent = 'Adicionar Review';
-                saveReviewBtn.textContent = 'Salvar Review';
-                document.querySelector('#reviewModal .mb-3:first-child').style.display = 'block';
-                
-                // Abrir modal
-                reviewModal.show();
-            });
-            
-            // Buscar música
-            searchTrackBtn.addEventListener('click', function() {
-                const searchQuery = searchTrackInput.value.trim();
-                if (searchQuery) {
-                    // Mostrar indicador de carregamento
-                    searchResults.innerHTML = '<div class="text-center my-3"><div class="spinner-border text-light" role="status"></div></div>';
-                    searchResults.style.display = 'block';
-                    
-                    // Fazer requisição AJAX para buscar músicas no Spotify
-                    fetch(`/spotify/search/?q=${encodeURIComponent(searchQuery)}`)
-                        .then(response => response.json())
-                        .then(data => {
-                            // Renderizar resultados
-                            searchResults.innerHTML = '';
-                            
-                            if (data.tracks && data.tracks.length > 0) {
-                                data.tracks.forEach(track => {
-                                    const trackElement = document.createElement('div');
-                                    trackElement.className = 'review-track p-2 cursor-pointer';
-                                    trackElement.style.cursor = 'pointer';
-                                    trackElement.innerHTML = `
-                                        <div class="d-flex align-items-center">
-                                            <img src="${track.image}" alt="${track.name}" class="review-track-image" style="width: 50px; height: 50px;">
-                                            <div class="review-track-info ms-3">
-                                                <div class="review-track-name">${track.name}</div>
-                                                <div class="review-track-artist">${track.artist}</div>
-                                            </div>
-                                        </div>
-                                    `;
-                                    
-                                    // Adicionar evento de clique para selecionar a música
-                                    trackElement.addEventListener('click', function() {
-                                        // Preencher e mostrar a música selecionada
-                                        selectedTrackImg.src = track.image;
-                                        selectedTrackName.textContent = track.name;
-                                        selectedTrackArtist.textContent = track.artist;
-                                        selectedTrack.style.display = 'block';
-                                        
-                                        // Esconder resultados da busca
-                                        searchResults.style.display = 'none';
-                                        
-                                        // Armazenar dados da música selecionada
-                                        selectedTrack.dataset.id = track.id;
-                                        selectedTrack.dataset.name = track.name;
-                                        selectedTrack.dataset.artist = track.artist;
-                                        selectedTrack.dataset.image = track.image;
-                                    });
-                                    
-                                    searchResults.appendChild(trackElement);
-                                });
-                            } else {
-                                searchResults.innerHTML = '<div class="text-center my-3">Nenhuma música encontrada</div>';
-                            }
-                        })
-                        .catch(error => {
-                            console.error('Erro ao buscar músicas:', error);
-                            searchResults.innerHTML = '<div class="text-center my-3">Erro ao buscar músicas. Tente novamente.</div>';
-                        });
-                }
-            });
-            
-            // Salvar review
-            saveReviewBtn.addEventListener('click', function() {
-                // Verificar se uma música foi selecionada
-                if (selectedTrack.style.display === 'none') {
-                    alert('Por favor, selecione uma música para revisar.');
-                    return;
-                }
-                
-                // Obter avaliação (estrelas)
-                const ratingInputs = document.querySelectorAll('input[name="rating"]');
-                let rating = 0;
-                ratingInputs.forEach(input => {
-                    if (input.checked) {
-                        rating = input.value;
-                    }
-                });
-                
-                if (rating === 0) {
-                    alert('Por favor, dê uma avaliação de 1 a 5 estrelas.');
-                    return;
-                }
-                
-                // Obter texto da review
-                const reviewText = document.getElementById('reviewText').value.trim();
-                if (!reviewText) {
-                    alert('Por favor, escreva sua review.');
-                    return;
-                }
-                
-                // Obter reviews salvas
-                let reviews = JSON.parse(localStorage.getItem('reviews') || '[]');
-                
-                // Verificar se estamos editando uma review existente
-                const editId = document.getElementById('reviewModal').dataset.editId;
-                
-                if (editId) {
-                    // Editar review existente
-                    const reviewIndex = reviews.findIndex(r => r.id == editId);
-                    
-                    if (reviewIndex !== -1) {
-                        // Manter a data original e adicionar data de edição
-                        const originalDate = reviews[reviewIndex].date;
-                        
-                        // Atualizar a review
-                        reviews[reviewIndex] = {
-                            id: editId,
-                            trackId: selectedTrack.dataset.id,
-                            trackName: selectedTrack.dataset.name,
-                            trackArtist: selectedTrack.dataset.artist,
-                            trackImage: selectedTrack.dataset.image,
-                            rating: rating,
-                            text: reviewText,
-                            date: originalDate,
-                            editedDate: new Date().toISOString()
-                        };
-                        
-                        // Remover a review antiga da interface
-                        const oldReviewElement = document.querySelector(`.review-card[data-id="${editId}"]`);
-                        if (oldReviewElement) {
-                            oldReviewElement.remove();
-                        }
-                    }
-                } else {
-                    // Criar nova review
-                    const review = {
-                        id: Date.now(), // ID único baseado no timestamp
-                        trackId: selectedTrack.dataset.id,
-                        trackName: selectedTrack.dataset.name,
-                        trackArtist: selectedTrack.dataset.artist,
-                        trackImage: selectedTrack.dataset.image,
-                        rating: rating,
-                        text: reviewText,
-                        date: new Date().toISOString()
-                    };
-                    
-                    // Adicionar à lista de reviews
-                    reviews.push(review);
-                }
-                
-                // Salvar reviews no localStorage
-                localStorage.setItem('reviews', JSON.stringify(reviews));
-                
-                // Adicionar review à lista
-                addReviewToList(editId ? reviews.find(r => r.id == editId) : reviews[reviews.length - 1]);
-                
-                // Esconder mensagem de "sem reviews"
-                noReviewsMessage.style.display = 'none';
-                
-                // Fechar modal
-                reviewModal.hide();
-                
-                // Resetar o modal para o modo de adição
-                document.getElementById('reviewModal').dataset.editId = '';
-                document.querySelector('.modal-title').textContent = 'Adicionar Review';
-                saveReviewBtn.textContent = 'Salvar Review';
-                document.querySelector('#reviewModal .mb-3:first-child').style.display = 'block';
-            });
-            
-            // Função para adicionar review à lista
-            function addReviewToList(review) {
-                const reviewElement = document.createElement('div');
-                reviewElement.className = 'review-card';
-                reviewElement.dataset.id = review.id;
-                
-                // Formatar data de criação
-                const reviewDate = new Date(review.date);
-                const formattedDate = reviewDate.toLocaleDateString('pt-BR', {
-                    day: '2-digit',
-                    month: '2-digit',
-                    year: 'numeric'
-                });
-                
-                // Formatar data de edição, se existir
-                let editedDateHtml = '';
-                if (review.editedDate) {
-                    const editedDate = new Date(review.editedDate);
-                    const formattedEditedDate = editedDate.toLocaleDateString('pt-BR', {
-                        day: '2-digit',
-                        month: '2-digit',
-                        year: 'numeric'
-                    });
-                    editedDateHtml = `<div class="review-edited-date">(Editado em ${formattedEditedDate})</div>`;
-                }
-                
-                // Criar estrelas
-                let stars = '';
-                for (let i = 1; i <= 5; i++) {
-                    if (i <= review.rating) {
-                        stars += '<i class="fas fa-star"></i>';
-                    } else {
-                        stars += '<i class="far fa-star"></i>';
-                    }
-                }
-                
-                reviewElement.innerHTML = `
-                    <div class="review-track">
-                        <img src="${review.trackImage}" alt="${review.trackName}" class="review-track-image">
-                        <div class="review-track-info">
-                            <div class="review-track-name">${review.trackName}</div>
-                            <div class="review-track-artist">${review.trackArtist}</div>
-                        </div>
-                    </div>
-                    <div class="review-rating">${stars}</div>
-                    <div class="review-text">"${review.text}"</div>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <div class="review-date">${formattedDate} ${editedDateHtml}</div>
-                        <div class="review-actions">
-                            <button class="btn btn-sm btn-outline-light me-2 edit-review-btn">
-                                <i class="fas fa-edit"></i>
-                            </button>
-                            <button class="btn btn-sm btn-outline-danger delete-review-btn">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                        </div>
-                    </div>
-                `;
-                
-                // Adicionar evento para editar review
-                const editBtn = reviewElement.querySelector('.edit-review-btn');
-                editBtn.addEventListener('click', function() {
-                    openEditReviewModal(review);
-                });
-                
-                // Adicionar evento para excluir review
-                const deleteBtn = reviewElement.querySelector('.delete-review-btn');
-                deleteBtn.addEventListener('click', function() {
-                    if (confirm('Tem certeza que deseja excluir esta review?')) {
-                        // Remover do DOM
-                        reviewElement.remove();
-                        
-                        // Remover do localStorage
-                        let reviews = JSON.parse(localStorage.getItem('reviews') || '[]');
-                        reviews = reviews.filter(r => r.id != review.id);
-                        localStorage.setItem('reviews', JSON.stringify(reviews));
-                        
-                        // Mostrar mensagem de "sem reviews" se necessário
-                        if (reviews.length === 0) {
-                            noReviewsMessage.style.display = 'block';
-                        }
-                    }
-                });
-                
-                // Adicionar ao início da lista
-                reviewList.insertBefore(reviewElement, reviewList.firstChild);
-            }
-            
-            // Função para abrir o modal de edição de review
-            function openEditReviewModal(review) {
-                // Preencher os campos do modal com os dados da review
-                selectedTrackImg.src = review.trackImage;
-                selectedTrackName.textContent = review.trackName;
-                selectedTrackArtist.textContent = review.trackArtist;
-                selectedTrack.style.display = 'block';
-                
-                // Armazenar dados da música selecionada
-                selectedTrack.dataset.id = review.trackId;
-                selectedTrack.dataset.name = review.trackName;
-                selectedTrack.dataset.artist = review.trackArtist;
-                selectedTrack.dataset.image = review.trackImage;
-                
-                // Definir a avaliação (estrelas)
-                document.querySelector(`input[name="rating"][value="${review.rating}"]`).checked = true;
-                
-                // Definir o texto da review
-                document.getElementById('reviewText').value = review.text;
-                
-                // Armazenar o ID da review sendo editada
-                document.getElementById('reviewModal').dataset.editId = review.id;
-                
-                // Alterar o título e o botão do modal
-                document.querySelector('.modal-title').textContent = 'Editar Review';
-                saveReviewBtn.textContent = 'Salvar Alterações';
-                
-                // Esconder a seção de busca
-                document.querySelector('#reviewModal .mb-3:first-child').style.display = 'none';
-                searchResults.style.display = 'none';
-                
-                // Abrir o modal
-                reviewModal.show();
-            }
-            
-            // Carregar reviews salvas
-            function loadSavedReviews() {
-                const reviews = JSON.parse(localStorage.getItem('reviews') || '[]');
-                if (reviews.length > 0) {
-                    noReviewsMessage.style.display = 'none';
-                    reviews.forEach(review => {
-                        addReviewToList(review);
-                    });
-                }
-            }
-            
-            // Carregar configurações salvas
-            function loadSavedSettings() {
-                // Carregar imagem de capa
-                const savedCoverUrl = localStorage.getItem('profileCoverUrl');
-                if (savedCoverUrl) {
-                    profileCover.src = savedCoverUrl;
-                }
-                
-                // Carregar imagem de avatar
-                const savedAvatarUrl = localStorage.getItem('profileAvatarUrl');
-                if (savedAvatarUrl) {
-                    profileAvatar.src = savedAvatarUrl;
-                }
-                
-                // Carregar efeito de fundo
-                const savedEffect = localStorage.getItem('backgroundEffect');
-                if (savedEffect) {
-                    backgroundEffects.className = `background-effects ${savedEffect}`;
-                    updateEffectButtons(savedEffect);
-                }
-            }
-            
-            // Inicializar
-            loadSavedReviews();
-            loadSavedSettings();
+            container.appendChild(trackItem);
         });
-    </script>
-</body>
-</html>
+    }
 
+    function initialAnimation() {
+        const trackItems = document.querySelectorAll(".track-item");
+        
+        trackItems.forEach((item, index) => {
+            item.style.opacity = "0";
+            item.style.transform = "translateY(20px)";
+            
+            setTimeout(() => {
+                item.style.transition = "opacity 0.8s ease, transform 0.8s ease";
+                item.style.opacity = "1";
+                item.style.transform = "translateY(0)";
+            }, index * 60);
+        });
+    }
 
+    function setupHoverEvents(backgroundImage, tracksContainer) {
+        const trackItems = document.querySelectorAll(".track-item");
 
+        trackItems.forEach((item) => {
+            item.addEventListener("mouseenter", function () {
+                const imageUrl = this.dataset.image;
 
+                backgroundImage.style.transition = "none";
+                backgroundImage.style.transform = "scale(1.2)";
+                backgroundImage.src = imageUrl;
+                backgroundImage.style.opacity = "1";
 
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        backgroundImage.style.transition = "transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94)";
+                        backgroundImage.style.transform = "scale(1.0)";
+                    });
+                });
+            });
+        });
 
+        tracksContainer.addEventListener("mouseleave", function () {
+            backgroundImage.style.opacity = "0";
+        });
+    }
+
+    function preloadImages() {
+        tracks.forEach((track) => {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.src = track.image;
+        });
+    }
+</script>
+{% endblock %}
 
 
 

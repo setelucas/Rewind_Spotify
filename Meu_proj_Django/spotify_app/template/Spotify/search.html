@@ -1,0 +1,23 @@
+{% extends "Spotify/base.html" %}
+
+{% block title %}Buscar - Spotify Rewind{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-8">
+            <div class="card">
+                <div class="card-header bg-success text-white text-center">
+                    <h4><i class="fas fa-search"></i> Buscar Música</h4>
+                </div>
+                <div class="card-body">
+                    <p class="text-center">Funcionalidade de busca em desenvolvimento.</p>
+                    <div class="text-center">
+                        <a href="{% url 'rewind' %}" class="btn btn-success">Voltar ao Rewind</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

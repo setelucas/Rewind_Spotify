@@ -1,8 +1,31 @@
-<!DOCTYPE html>
-<html>
-<head><title>Login Spotify</title></head>
-<body>
-  <h1>Conectar com Spotify</h1>
-  <a href="{% url 'login' %}">Login com Spotify</a>
-</body>
-</html>
+{% extends "Spotify/base.html" %}
+
+{% block title %}Login - Spotify Rewind{% endblock %}
+
+{% block content %}
+<div class="container mt-5">
+    <div class="row justify-content-center">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header bg-success text-white text-center">
+                    <h4><i class="fas fa-spotify"></i> Spotify Rewind</h4>
+                </div>
+                <div class="card-body text-center">
+                    <h5>Bem-vindo!</h5>
+                    <p>Conecte-se ao Spotify para ver seu rewind musical.</p>
+                    
+                    <a href="{{ auth_url }}" class="btn btn-success btn-lg">
+                        <i class="fab fa-spotify"></i> Conectar com Spotify
+                    </a>
+                    
+                    <div class="mt-3">
+                        <small class="text-muted">
+                            Você será redirecionado para o Spotify para autorizar o acesso
+                        </small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

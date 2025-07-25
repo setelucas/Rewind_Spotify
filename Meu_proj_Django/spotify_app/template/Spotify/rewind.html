@@ -1,7 +1,166 @@
 {% extends "Spotify/base.html" %}
+{% load static %}
 
-{% block title %}Spotify Rewind{% endblock %}
+{% block title %}Seu Rewind Musical - Spotify Rewind{% endblock %}
 
 {% block content %}
-<!-- Seu conteúdo atual aqui -->
+<link rel="stylesheet" href="{% static 'Spotify_app/css/rewind_style.css' %}">
+
+<div id="background-image-container">
+    <img id="background-image" crossorigin="anonymous" alt="">
+</div>
+
+<a href="{% url 'profile' %}" class="back-button">
+    ← Voltar
+</a>
+
+<div class="container">
+    <div class="tracks-container">
+        <!-- As músicas serão renderizadas aqui pelo JavaScript -->
+    </div>
+</div>
+
+<script>
+    // Dados das músicas do usuário vindos do Django
+    const tracks = [
+        {% for track in top_tracks %}
+        {
+            id: "{{ track.id }}",
+            name: "{{ track.name|escapejs }}",
+            artist: "{{ track.artist_names|escapejs }}",
+            plays: "{{ forloop.counter }}º",
+            image: "{% if track.image %}{{ track.image }}{% else %}https://via.placeholder.com/300x300/1a1917/f8f5f2?text=No+Image{% endif %}",
+            album: "{{ track.album|escapejs }}",
+            popularity: {{ track.popularity }},
+            preview_url: "{{ track.preview_url|default:'' }}",
+            external_url: "{{ track.external_url }}",
+            duration: {{ track.duration_ms }},
+            danceability: {{ track.danceability }},
+            energy: {{ track.energy }},
+            valence: {{ track.valence }}
+        }{% if not forloop.last %},{% endif %}
+        {% empty %}
+        {
+            id: "no-tracks",
+            name: "Nenhuma música encontrada",
+            artist: "Conecte-se ao Spotify",
+            plays: "0",
+            image: "https://via.placeholder.com/300x300/1a1917/f8f5f2?text=No+Music",
+            album: "",
+            popularity: 0,
+            preview_url: "",
+            external_url: "#",
+            duration: 0,
+            danceability: 0,
+            energy: 0,
+            valence: 0
+        }
+        {% endfor %}
+    ];
+
+    document.addEventListener("DOMContentLoaded", function () {
+        const tracksContainer = document.querySelector(".tracks-container");
+        const backgroundImage = document.getElementById("background-image");
+        
+        // Renderizar músicas
+        renderTracks(tracksContainer);
+        
+        // Animação inicial
+        initialAnimation();
+        
+        // Precarregar imagens
+        preloadImages();
+        
+        // Configurar eventos de hover
+        setupHoverEvents(backgroundImage, tracksContainer);
+    });
+
+    // Renderizar itens das músicas
+    function renderTracks(container) {
+        tracks.forEach((track) => {
+            const trackItem = document.createElement("div");
+            trackItem.classList.add("track-item");
+            trackItem.dataset.id = track.id;
+            trackItem.dataset.image = track.image;
+
+            // Converter duração de ms para mm:ss
+            const minutes = Math.floor(track.duration / 60000);
+            const seconds = ((track.duration % 60000) / 1000).toFixed(0);
+            const duration = minutes + ":" + (seconds < 10 ? '0' : '') + seconds;
+
+            trackItem.innerHTML = `
+                <div class="track-info">
+                    <div class="track-name">${track.name}</div>
+                    <div class="track-artist">${track.artist}</div>
+                    <div class="track-details">
+                        <small>${track.album} • ${duration} • Popularidade: ${track.popularity}%</small>
+                    </div>
+                </div>
+                <div class="track-position">${track.plays}</div>
+            `;
+
+            // Adicionar evento de clique para abrir no Spotify
+            if (track.external_url !== "#") {
+                trackItem.style.cursor = "pointer";
+                trackItem.addEventListener("click", function() {
+                    window.open(track.external_url, '_blank');
+                });
+            }
+
+            container.appendChild(trackItem);
+        });
+    }
+
+    // Animação inicial para os itens
+    function initialAnimation() {
+        const trackItems = document.querySelectorAll(".track-item");
+        
+        trackItems.forEach((item, index) => {
+            item.style.opacity = "0";
+            item.style.transform = "translateY(20px)";
+            
+            setTimeout(() => {
+                item.style.transition = "opacity 0.8s ease, transform 0.8s ease";
+                item.style.opacity = "1";
+                item.style.transform = "translateY(0)";
+            }, index * 60);
+        });
+    }
+
+    // Configurar eventos de hover
+    function setupHoverEvents(backgroundImage, tracksContainer) {
+        const trackItems = document.querySelectorAll(".track-item");
+
+        trackItems.forEach((item) => {
+            item.addEventListener("mouseenter", function () {
+                const imageUrl = this.dataset.image;
+
+                backgroundImage.style.transition = "none";
+                backgroundImage.style.transform = "scale(1.2)";
+                backgroundImage.src = imageUrl;
+                backgroundImage.style.opacity = "1";
+
+                requestAnimationFrame(() => {
+                    requestAnimationFrame(() => {
+                        backgroundImage.style.transition = "transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94)";
+                        backgroundImage.style.transform = "scale(1.0)";
+                    });
+                });
+            });
+        });
+
+        tracksContainer.addEventListener("mouseleave", function () {
+            backgroundImage.style.opacity = "0";
+        });
+    }
+
+    // Precarregar imagens
+    function preloadImages() {
+        tracks.forEach((track) => {
+            const img = new Image();
+            img.crossOrigin = "anonymous";
+            img.src = track.image;
+        });
+    }
+</script>
 {% endblock %}
