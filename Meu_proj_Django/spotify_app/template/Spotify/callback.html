@@ -1,7 +1,18 @@
 <!DOCTYPE html>
 <html>
-<head><title>Callback</title></head>
+<head>
+    <title>Callback</title>
+    <meta http-equiv="refresh" content="2;url={% url 'profile' %}">
+</head>
 <body>
-  <p>Autenticado! Redirecionando...</p>
+    <div style="text-align: center; margin-top: 50px; font-family: Arial, sans-serif;">
+        <h2>Autenticado! Redirecionando...</h2>
+        <p>Aguarde um momento...</p>
+        <script>
+            setTimeout(function() {
+                window.location.href = "{% url 'profile' %}";
+            }, 2000);
+        </script>
+    </div>
 </body>
 </html>

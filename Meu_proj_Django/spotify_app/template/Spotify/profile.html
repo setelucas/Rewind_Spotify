@@ -1,123 +1,213 @@
-{% extends "Spotify/base.html" %}
-{% load static %}
-
-{% block title %}Perfil - Spotify Rewind{% endblock %}
-
-{% block content %}
-<link rel="stylesheet" href="{% static 'Spotify_app/css/profile_style.css' %}">
-
-<div id="background-image-container">
-    <img id="background-image" crossorigin="anonymous" alt="">
-</div>
-
-<a href="{% url 'logout' %}" class="back-button">
-    ← Sair
-</a>
-
-<div class="container">
-    <div class="tracks-container">
-        <!-- As músicas serão renderizadas aqui pelo JavaScript -->
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Perfil - Spotify Rewind</title>
+    
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'Spotify_app/css/profile_style.css' %}">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="profile-container">
+        <a href="{% url 'logout' %}" class="back-button">
+            ← Sair
+        </a>
+        
+        <div class="skills">
+            <div class="each bio-section">
+                <div class="box">
+                    <button class="edit-btn" onclick="toggleEditBio()">✏️</button>
+                    <div class="content">
+                        <i class="fas fa-user"></i>
+                        <h2>SOBRE MIM</h2>
+                        <p id="bio-text">{{ user_bio|default:"Apaixonado por música, sempre descobrindo novos sons e compartilhando as melhores playlists." }}</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="each rewind-section">
+                <div class="box">
+                    <button class="edit-btn" onclick="toggleEditRewind()">✏️</button>
+                    <div class="content">
+                        <i class="fas fa-music"></i>
+                        <h2>REWIND</h2>
+                        <p id="rewind-text">{{ custom_rewind_title|default:"Meu Rewind Musical" }}</p>
+                        <a href="{% url 'rewind' %}" style="color: #1db954; text-decoration: none; font-weight: 600;">Ver Rewind →</a>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="center">
+                <div class="box">
+                    <div class="profile-center">
+                        <img class="card-avatar" src="{% if user_info.images %}{{ user_info.images.0.url }}{% else %}https://via.placeholder.com/80x80/1db954/ffffff?text={{ user_info.display_name|slice:':1'|upper }}{% endif %}" alt="avatar" />
+                        <h3>{{ user_info.display_name|default:"Usuário" }}</h3>
+                        <p>Ouvinte Musical</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="each stats-section">
+                <div class="box">
+                    <div class="content">
+                        <i class="fab fa-spotify"></i>
+                        <h2>SPOTIFY</h2>
+                        <p>Conectado e ativo</p>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="each social-section">
+                <div class="box">
+                    <div class="content">
+                        <i class="fas fa-share-alt"></i>
+                        <h2>SOCIAL</h2>
+                        <p>Compartilhe seu perfil</p>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-</div>
 
-<script>
-    // Dados das top tracks do usuário vindos do Django
-    const tracks = [
-        {% for track in top_tracks %}
-        {
-            id: {{ forloop.counter }},
-            name: "{{ track.name|escapejs }}",
-            artist: "{% for artist in track.artists %}{{ artist.name }}{% if not forloop.last %}, {% endif %}{% endfor %}",
-            image: "{% if track.album.images %}{{ track.album.images.0.url }}{% else %}https://via.placeholder.com/300x300/1a1917/f8f5f2?text=No+Image{% endif %}"
-        }{% if not forloop.last %},{% endif %}
-        {% empty %}
-        {
-            id: 1,
-            name: "Nenhuma música encontrada",
-            artist: "Faça login novamente",
-            image: "https://via.placeholder.com/300x300/1a1917/f8f5f2?text=No+Music"
+    <!-- Modais -->
+    <div id="bio-modal" class="modal">
+        <div class="modal-content">
+            <h3>Editar Bio</h3>
+            <textarea id="bio-textarea" class="edit-textarea" maxlength="500" placeholder="Conte um pouco sobre você...">{{ user_bio|default:"Apaixonado por música, sempre descobrindo novos sons e compartilhando as melhores playlists." }}</textarea>
+            <div class="char-counter">
+                <span id="bio-char-count">0</span>/500 caracteres
+            </div>
+            <div class="edit-actions">
+                <button class="save-btn" onclick="saveBio()">Salvar</button>
+                <button class="cancel-btn" onclick="cancelEditBio()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="rewind-modal" class="modal">
+        <div class="modal-content">
+            <h3>Editar Título do Rewind</h3>
+            <input type="text" id="rewind-input" class="edit-input" maxlength="100" placeholder="Título do seu rewind..." value="{{ custom_rewind_title|default:'Meu Rewind Musical' }}">
+            <div class="char-counter">
+                <span id="rewind-char-count">0</span>/100 caracteres
+            </div>
+            <div class="edit-actions">
+                <button class="save-btn" onclick="saveRewind()">Salvar</button>
+                <button class="cancel-btn" onclick="cancelEditRewind()">Cancelar</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // JavaScript functions here...
+        function toggleEditBio() {
+            document.getElementById('bio-modal').style.display = 'flex';
+            updateCharCount('bio');
         }
-        {% endfor %}
-    ];
 
-    document.addEventListener("DOMContentLoaded", function () {
-        const tracksContainer = document.querySelector(".tracks-container");
-        const backgroundImage = document.getElementById("background-image");
-        
-        renderTracks(tracksContainer);
-        initialAnimation();
-        preloadImages();
-        setupHoverEvents(backgroundImage, tracksContainer);
-    });
+        function cancelEditBio() {
+            document.getElementById('bio-modal').style.display = 'none';
+        }
 
-    function renderTracks(container) {
-        tracks.forEach((track, index) => {
-            const trackItem = document.createElement("div");
-            trackItem.classList.add("track-item");
-            trackItem.dataset.id = track.id;
-            trackItem.dataset.image = track.image;
+        function toggleEditRewind() {
+            document.getElementById('rewind-modal').style.display = 'flex';
+            updateCharCount('rewind');
+        }
 
-            trackItem.innerHTML = `
-                <div class="track-name">${track.name}</div>
-                <div class="track-artist">${track.artist}</div>
+        function cancelEditRewind() {
+            document.getElementById('rewind-modal').style.display = 'none';
+        }
+
+        function updateCharCount(type) {
+            const textarea = document.getElementById(type + '-textarea') || document.getElementById(type + '-input');
+            const counter = document.getElementById(type + '-char-count');
+            
+            function update() {
+                counter.textContent = textarea.value.length;
+            }
+            
+            textarea.addEventListener('input', update);
+            update();
+        }
+
+        function saveBio() {
+            const newBio = document.getElementById('bio-textarea').value;
+            
+            fetch('{% url "update_bio" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({bio: newBio})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('bio-text').textContent = data.bio;
+                    showMessage('Bio atualizada com sucesso!', 'success');
+                    cancelEditBio();
+                } else {
+                    showMessage(data.error, 'error');
+                }
+            })
+            .catch(error => {
+                showMessage('Erro ao salvar bio', 'error');
+            });
+        }
+
+        function saveRewind() {
+            const newTitle = document.getElementById('rewind-input').value;
+            
+            fetch('{% url "update_rewind_title" %}', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: JSON.stringify({title: newTitle})
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    document.getElementById('rewind-text').textContent = data.title;
+                    showMessage('Título do rewind atualizado!', 'success');
+                    cancelEditRewind();
+                } else {
+                    showMessage(data.error, 'error');
+                }
+            })
+            .catch(error => {
+                showMessage('Erro ao salvar título', 'error');
+            });
+        }
+
+        function showMessage(message, type) {
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${type}`;
+            messageDiv.textContent = message;
+            messageDiv.style.cssText = `
+                position: fixed;
+                top: 20px;
+                right: 20px;
+                padding: 10px 20px;
+                border-radius: 5px;
+                color: white;
+                z-index: 1000;
+                background: ${type === 'success' ? '#1db954' : '#e22134'};
             `;
-
-            container.appendChild(trackItem);
-        });
-    }
-
-    function initialAnimation() {
-        const trackItems = document.querySelectorAll(".track-item");
-        
-        trackItems.forEach((item, index) => {
-            item.style.opacity = "0";
-            item.style.transform = "translateY(20px)";
+            
+            document.body.appendChild(messageDiv);
             
             setTimeout(() => {
-                item.style.transition = "opacity 0.8s ease, transform 0.8s ease";
-                item.style.opacity = "1";
-                item.style.transform = "translateY(0)";
-            }, index * 60);
-        });
-    }
-
-    function setupHoverEvents(backgroundImage, tracksContainer) {
-        const trackItems = document.querySelectorAll(".track-item");
-
-        trackItems.forEach((item) => {
-            item.addEventListener("mouseenter", function () {
-                const imageUrl = this.dataset.image;
-
-                backgroundImage.style.transition = "none";
-                backgroundImage.style.transform = "scale(1.2)";
-                backgroundImage.src = imageUrl;
-                backgroundImage.style.opacity = "1";
-
-                requestAnimationFrame(() => {
-                    requestAnimationFrame(() => {
-                        backgroundImage.style.transition = "transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94)";
-                        backgroundImage.style.transform = "scale(1.0)";
-                    });
-                });
-            });
-        });
-
-        tracksContainer.addEventListener("mouseleave", function () {
-            backgroundImage.style.opacity = "0";
-        });
-    }
-
-    function preloadImages() {
-        tracks.forEach((track) => {
-            const img = new Image();
-            img.crossOrigin = "anonymous";
-            img.src = track.image;
-        });
-    }
-</script>
-{% endblock %}
-
-
+                messageDiv.remove();
+            }, 3000);
+        }
+    </script>
+</body>
+</html>
 
 
 

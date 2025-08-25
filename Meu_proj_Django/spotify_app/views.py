@@ -1,11 +1,14 @@
-from django.http import HttpResponse
-from django.shortcuts import redirect, render
+from django.http import HttpResponse, JsonResponse
+from django.shortcuts import redirect, render, get_object_or_404
 from django.contrib import messages
+from django.views.decorators.http import require_http_methods
+from django.views.decorators.csrf import csrf_exempt
+import json
 import spotipy
 from spotipy.oauth2 import SpotifyOAuth
 from django.conf import settings
 import urllib.parse
-from .models import SpotifyUser
+from .models import SpotifyUser, CustomRewindItem
 from django.utils import timezone
 import datetime
 from django.contrib.auth.models import User
@@ -205,10 +208,14 @@ def profile(request):
         user_info = sp.current_user()
         top_tracks = sp.current_user_top_tracks(limit=5, time_range='medium_term')
         
+        # Buscar itens personalizados do rewind
+        custom_rewind_items = spotify_user.custom_rewind_items.all()[:4]
+        
         context = {
             'user_info': user_info,
             'top_tracks': top_tracks['items'],
             'spotify_user': spotify_user,
+            'custom_rewind_items': custom_rewind_items,
             'message': f'Bem-vindo, {user_info.get("display_name", "Usuário")}!'
         }
         
@@ -218,8 +225,20 @@ def profile(request):
         messages.error(request, "Usuário não encontrado. Faça login novamente.")
         return redirect('login')
     except Exception as e:
-        messages.error(request, f"Erro ao buscar dados do Spotify: {str(e)}")
+        messages.error(request, f"Erro ao buscar dados: {str(e)}")
         return redirect('login')
+
+def profile_test(request):
+    """View de teste para o perfil"""
+    context = {
+        'user_info': {
+            'display_name': 'Usuário Teste',
+            'images': [{'url': 'https://via.placeholder.com/80x80/1db954/ffffff?text=U'}]
+        },
+        'user_bio': 'Apaixonado por música, sempre descobrindo novos sons.',
+        'custom_rewind_title': 'Meu Rewind Musical'
+    }
+    return render(request, 'Spotify/profile.html', context)
 
 def logout(request):
     """Logout - limpa sessão"""
@@ -332,3 +351,163 @@ def user_settings(request):
     except SpotifyUser.DoesNotExist:
         messages.error(request, "Usuário não encontrado")
         return redirect('login')
+
+@require_http_methods(["POST"])
+def update_bio(request):
+    """Atualizar biografia do usuário"""
+    spotify_user_id = request.session.get('spotify_user_id')
+    
+    if not spotify_user_id:
+        return JsonResponse({'success': False, 'error': 'Usuário não logado'})
+    
+    try:
+        spotify_user = SpotifyUser.objects.get(spotify_id=spotify_user_id)
+        data = json.loads(request.body)
+        new_bio = data.get('bio', '').strip()
+        
+        if len(new_bio) > 500:
+            return JsonResponse({'success': False, 'error': 'Bio muito longa (máximo 500 caracteres)'})
+        
+        spotify_user.bio = new_bio
+        spotify_user.save()
+        
+        return JsonResponse({'success': True, 'bio': new_bio})
+        
+    except SpotifyUser.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Usuário não encontrado'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@require_http_methods(["POST"])
+def update_rewind_items(request):
+    """Atualizar itens personalizados do rewind"""
+    spotify_user_id = request.session.get('spotify_user_id')
+    
+    if not spotify_user_id:
+        return JsonResponse({'success': False, 'error': 'Usuário não logado'})
+    
+    try:
+        spotify_user = SpotifyUser.objects.get(spotify_id=spotify_user_id)
+        data = json.loads(request.body)
+        items = data.get('items', [])
+        rewind_title = data.get('title', '').strip()
+        
+        # Atualizar título do rewind
+        if rewind_title and len(rewind_title) <= 100:
+            spotify_user.custom_rewind_title = rewind_title
+            spotify_user.save()
+        
+        # Limpar itens existentes
+        spotify_user.custom_rewind_items.all().delete()
+        
+        # Criar novos itens
+        for i, item in enumerate(items[:4], 1):  # Máximo 4 itens
+            title = item.get('title', '').strip()
+            artist = item.get('artist', '').strip()
+            album = item.get('album', '').strip()
+            duration = item.get('duration', '').strip()
+            popularity = item.get('popularity', '')
+            description = item.get('description', '').strip()
+            image = item.get('image', '').strip()
+            spotify_url = item.get('spotify_url', '').strip()
+            
+            if title and artist:
+                CustomRewindItem.objects.create(
+                    user=spotify_user,
+                    title=title[:200],
+                    artist=artist[:200],
+                    album=album[:200] if album else None,
+                    duration=duration[:10] if duration else None,
+                    popularity=int(popularity) if popularity and popularity.isdigit() else None,
+                    description=description[:300],
+                    image=image[:500] if image else None,
+                    spotify_url=spotify_url[:500] if spotify_url else None,
+                    position=i
+                )
+        
+        return JsonResponse({'success': True})
+        
+    except SpotifyUser.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Usuário não encontrado'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@require_http_methods(["POST"])
+def update_rewind_title(request):
+    """Atualizar título do rewind"""
+    spotify_user_id = request.session.get('spotify_user_id')
+    
+    if not spotify_user_id:
+        return JsonResponse({'success': False, 'error': 'Usuário não logado'})
+    
+    try:
+        spotify_user = SpotifyUser.objects.get(spotify_id=spotify_user_id)
+        data = json.loads(request.body)
+        new_title = data.get('title', '').strip()
+        
+        if len(new_title) > 100:
+            return JsonResponse({'success': False, 'error': 'Título muito longo (máximo 100 caracteres)'})
+        
+        spotify_user.custom_rewind_title = new_title
+        spotify_user.save()
+        
+        return JsonResponse({'success': True, 'title': new_title})
+        
+    except SpotifyUser.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Usuário não encontrado'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
+
+@require_http_methods(["GET"])
+def search_tracks(request):
+    """API para buscar músicas no Spotify"""
+    spotify_user_id = request.session.get('spotify_user_id')
+    
+    if not spotify_user_id:
+        return JsonResponse({'success': False, 'error': 'Usuário não logado'})
+    
+    query = request.GET.get('q', '').strip()
+    if not query:
+        return JsonResponse({'success': False, 'error': 'Consulta vazia'})
+    
+    try:
+        # Buscar usuário no banco
+        spotify_user = SpotifyUser.objects.get(spotify_id=spotify_user_id)
+        
+        # Verificar se token expirou
+        if spotify_user.is_token_expired():
+            return JsonResponse({'success': False, 'error': 'Sessão expirada'})
+        
+        # Criar cliente Spotify
+        sp = spotipy.Spotify(auth=spotify_user.access_token)
+        
+        # Buscar músicas
+        results = sp.search(q=query, type='track', limit=5)
+        
+        tracks = []
+        for item in results['tracks']['items']:
+            # Converter duração de ms para mm:ss
+            duration_ms = item['duration_ms']
+            minutes = duration_ms // 60000
+            seconds = (duration_ms % 60000) // 1000
+            duration = f"{minutes}:{seconds:02d}"
+            
+            track_info = {
+                'id': item['id'],
+                'name': item['name'],
+                'artist': ', '.join([artist['name'] for artist in item['artists']]),
+                'album': item['album']['name'],
+                'duration': duration,
+                'popularity': item['popularity'],
+                'image': item['album']['images'][0]['url'] if item['album']['images'] else None,
+                'preview_url': item.get('preview_url'),
+                'external_url': item['external_urls']['spotify']
+            }
+            tracks.append(track_info)
+        
+        return JsonResponse({'success': True, 'tracks': tracks})
+        
+    except SpotifyUser.DoesNotExist:
+        return JsonResponse({'success': False, 'error': 'Usuário não encontrado'})
+    except Exception as e:
+        return JsonResponse({'success': False, 'error': str(e)})
